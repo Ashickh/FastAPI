@@ -7,10 +7,7 @@ app = FastAPI()
 
 sample_db = {}
 
-class Book(BaseModel):
-    name: str
-    price: float
-    author: Optional[str] = None
+
 
 @app.get("/")
 def get_item():
