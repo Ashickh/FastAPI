@@ -1,32 +1,45 @@
-from typing import Optional
+from fastapi import FastAPI, HTTPException, Depends,Path,Query
+from models import NewUser,User
+from mongoengine import connect
+import json
+from mongoengine.queryset.visitor import Q
+from passlib.context import CryptContext
 
-from fastapi import FastAPI
-from pydantic import BaseModel
 
 app = FastAPI()
 
-sample_db = {}
+connect(db="library_mngmnt", host="localhost", port=27017)
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
-@app.get("/")
-def get_item():
-    return "This Is A Test"
+@app.post("/signup")
+def signup(user:NewUser):
+    nw_user = User(user_id = user.user_id,
+                   username = user.username,
+                   password = get_password_hash(user.password),
+                   email = user.email,
+                   age = user.age)
+    nw_user.save()
+    return {"message":"New User created Succesfully","data":user}
 
-@app.get("/get_books/{book_id}")
-def get_item(book_id: int):
-    return sample_db[book_id]
 
-@app.post("/create_books/{book_id}")
-def create_book(book_id: int, book: Book):
-    if book_id in sample_db:
-        return {"error":"Book Already Exists"}
-    sample_db[book_id] = book
-    return sample_db[book_id]
+@app.get("/users")
+def get_all_users():
+    users = json.loads(User.objects().to_json())
+    return users
 
-# @app.post("/create_items/{item_id}")
-# def create_item(item_id: int, item: Item):
-#     if item_id in inventory:
-#         return {"Error":"Item ID already exists"}
-#     inventory[item_id] = item
-#     return inventory[item_id]
+@app.get("/user/{user_id}")
+def get_user(user_id: int = Path(...,gt=0)):
+    user = User.objects.get(user_id=user_id)
+    user_dict = {
+        "user_id":user.user_id,
+        "username":user.username,
+        "password":user.password,
+        "email": user.email,
+        "age" : user.age
+    }
+    return user_dict
